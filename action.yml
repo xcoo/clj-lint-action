@@ -1,0 +1,31 @@
+name: 'clj-lint-action check'
+description: 'Get started with Container actions'
+author: 'niyarin'
+inputs:
+  linters:
+    description: 'target linters'
+    default: "\"all\""
+  sourceroot:
+    description: 'directory name of souce directory'
+    default: "\"\""
+  runner:
+      description: ':leiningen or :clojure.'
+      default: ":clojure"
+  github_token:
+    description: 'Github token to report linter results back to check'
+    required: true
+  usefiles:
+      description: 'if use files set "true" '
+      default: "false"
+  files:
+      decription: 'file list such as "xxxxx yyyyy"'
+      default: ""
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+  args:
+    - ${{ inputs.linters }}
+    - ${{ inputs.sourceroot }}
+    - ${{ inputs.runner }}
+    - ${{ inputs.usefiles }}
+    - ${{ inputs.files }}
