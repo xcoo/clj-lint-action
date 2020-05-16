@@ -7,18 +7,13 @@ Run some linters such as clj-kondo , kibit , eastwood and show results as warnin
 ```yaml
     steps:
     - uses: actions/checkout@v2
-    - uses: technote-space/get-diff-action@v1
-      id: git_diff
-      with:
-        SUFFIX_FILTER: .clj
-        SEPARATOR: ' '
-    - uses: xcoo/clj-lint-action@v1.0.0
+    - uses: xcoo/clj-lint-action@v1.1.1
       with:
         linters: "\"all\""
         github_token: ${{ secrets.GITHUB_TOKEN }}
         runner: ":leiningen"
-        usefiles: "true"
-        files:  ${{ steps.git_diff.outputs.diff }}
+        base_sha: ${{ github.event.before }}
+        eastwood_linters: "[:all]"
 ```
 
 ## about 'linters'
