@@ -223,13 +223,12 @@
                         (map filename->namespace)
                         (filter identity))]
     (when (seq relative-files)
-      (->> linters
-           (map #(case %
-                   "eastwood" (run-eastwood dir runner namespaces eastwood-linters)
-                   "kibit" (run-kibit dir relative-files relative-dir)
-                   "cljfmt" (run-cljfmt absolute-files dir' relative-dir)
-                   "clj-kondo" (run-clj-kondo dir' absolute-files relative-dir)))
-           (apply concat)))))
+      (mapcat #(case %
+                 "eastwood" (run-eastwood dir runner namespaces eastwood-linters)
+                 "kibit" (run-kibit dir relative-files relative-dir)
+                 "cljfmt" (run-cljfmt absolute-files dir' relative-dir)
+                 "clj-kondo" (run-clj-kondo dir' absolute-files relative-dir))
+              linters))))
 
 (defn- external-run [option]
   (run-linters  option))
