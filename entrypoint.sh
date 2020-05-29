@@ -2,7 +2,7 @@
 
 BRANCH_NAME=${GITHUB_REF#refs/heads/}
 
-if [ "$4" != "0000000000000000000000000000000000000000" ]
+if [ -n "$4" ] && [ "$4" != "0000000000000000000000000000000000000000" ]
 then
     git fetch --depth 1  origin $4
     FILES=`git diff HEAD FETCH_HEAD --diff-filter=AM --name-only|grep '\.clj$'|sed 's/^.*$/"&"/g'|tr "\n" " "`
