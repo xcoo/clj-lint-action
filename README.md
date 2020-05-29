@@ -12,7 +12,7 @@ Run some linters such as clj-kondo , kibit , eastwood and show results as warnin
         linters: "\"all\""
         github_token: ${{ secrets.GITHUB_TOKEN }}
         runner: ":leiningen"
-        base_sha: ${{ github.event.before }}
+        base_sha: ${{ github.event.pull_request.base.sha||github.event.before }}
         eastwood_linters: "[:all]"
 ```
 
