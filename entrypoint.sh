@@ -16,9 +16,9 @@ else
     FILES=`git diff $BASE_NEXT_HASH^ HEAD --diff-filter=AM --name-only|grep '\.clj$'|sed 's/^.*$/"&"/g'|tr "\n" " "`
 
     echo "BASE_HASH=" $BASE_NEXT_HASH
-    echo "FILES=" $FILES
 fi
 
+echo "FILES=" $FILES
 
 cd /lint-action-clj
 
