@@ -98,21 +98,24 @@
        (apply concat)
        (cstr/join "/")))
 
-(defn- run-clj-kondo [dir files relative-dir]
-  (let [kondo-result (apply sh (concat ["/usr/local/bin/clj-kondo" "--lint"]  files))
+(defn- run-clj-kondo [dir relative-files relative-dir]
+  (let [kondo-result
+        (sh "sh" "-c"
+            (str "cd " dir ";"
+                 "/usr/local/bin/clj-kondo " "--lint "
+                 (cstr/join relative-files)))
         result-lines
         (when (or (= (:exit kondo-result) 2) (= (:exit kondo-result) 3))
           (cstr/split-lines (:out kondo-result)))]
     (->> result-lines
-         (map (fn [line]
-                (when-let [matches (re-matches #"^(.*?)\:(\d*?)\:(\d*?)\:([a-z ]*)\:(.*)" line)]
-                  {:path (str relative-dir "/" (subs (second matches) (count dir)))
-                   :start_line (Integer/valueOf (nth matches 2))
-                   :end_line (Integer/valueOf (nth matches 2))
-                   :annotation_level "warning"
-                   :message
-                   (str "[clj-kondo]" (nth matches 5))})))
-         (filter identity))))
+         (keep (fn [line]
+                 (when-let [matches (re-matches #"^(.*?)\:(\d*?)\:(\d*?)\:([a-z ]*)\:(.*)" line)]
+                   {:path (str relative-dir "/" (second matches))
+                    :start_line (Integer/valueOf (nth matches 2))
+                    :end_line (Integer/valueOf (nth matches 2))
+                    :annotation_level "warning"
+                    :message
+                    (str "[clj-kondo]" (nth matches 5))}))))))
 
 (defn- run-cljfmt [files cwd relative-dir]
   (let [cljfmt-result (sh "sh"
@@ -227,7 +230,7 @@
                  "eastwood" (run-eastwood dir runner namespaces eastwood-linters)
                  "kibit" (run-kibit dir relative-files relative-dir)
                  "cljfmt" (run-cljfmt absolute-files dir' relative-dir)
-                 "clj-kondo" (run-clj-kondo dir' absolute-files relative-dir))
+                 "clj-kondo" (run-clj-kondo dir relative-files relative-dir))
               linters))))
 
 (defn- external-run [option]
