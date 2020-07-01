@@ -10,7 +10,8 @@
 (def check-name "clj-lint action")
 
 (def eastwood-linters [:bad-arglists :constant-test :def-in-def :deprecations
-                       :keyword-typos :local-shadows-var :misplaced-docstrings :no-ns-form-found :redefd-vars
+                       :keyword-typos :local-shadows-var :misplaced-docstrings
+                       :no-ns-form-found :redefd-vars
                        :suspicious-expression :suspicious-test :unlimited-use
                        :unused-fn-args :unused-locals :unused-meta-on-macro
                        :unused-namespaces :unused-private-vars :unused-ret-vals
@@ -63,8 +64,12 @@
       (cstr/split-lines (:out files)))))
 
 (defn- get-diff-files [dir git-sha]
-  (let [commit-count (->> (sh "sh" "-c" (str "cd " dir ";"
-                                             "git log  --oneline --no-merges | wc -l"))
+  (let [commit-count (->> (sh "sh"
+                              "-c"
+                              (str "cd "
+                                   dir
+                                   ";"
+                                   "git log  --oneline --no-merges | wc -l"))
                           :out
                           cstr/split-lines
                           first
@@ -109,7 +114,10 @@
           (cstr/split-lines (:out kondo-result)))]
     (->> result-lines
          (keep (fn [line]
-                 (when-let [matches (re-matches #"^(.*?)\:(\d*?)\:(\d*?)\:([a-z ]*)\:(.*)" line)]
+                 (when-let
+                  [matches (re-matches
+                            #"^(.*?)\:(\d*?)\:(\d*?)\:([a-z ]*)\:(.*)"
+                            line)]
                    {:path (str relative-dir "/" (second matches))
                     :start_line (Integer/valueOf (nth matches 2))
                     :end_line (Integer/valueOf (nth matches 2))
@@ -121,7 +129,9 @@
   (let [cljfmt-result (sh "sh"
                           "-c"
                           (str
-                           "clojure -Sdeps \"{:deps {cljfmt {:mvn/version \\\"RELEASE\\\" }}}\" -m cljfmt.main check "
+                           "clojure -Sdeps \"{:deps {cljfmt "
+                           "{:mvn/version \\\"RELEASE\\\" }}}\" "
+                           " -m cljfmt.main check "
                            (cstr/join " " files)))]
     (when-not (zero? (:exit cljfmt-result))
       (->> (:err cljfmt-result)
@@ -141,7 +151,8 @@
       (str
        "cd " dir ";"
        "clojure "
-       "-Sdeps " "\" {:deps {jonase/eastwood {:mvn/version \\\"RELEASE\\\" }}}\" "
+       "-Sdeps " "\" {:deps {jonase/eastwood "
+       "{:mvn/version \\\"RELEASE\\\" }}}\" "
        " -m  " "eastwood.lint "
        (pr-str (pr-str {:source-paths ["src"]
                         :linters linters
@@ -157,10 +168,14 @@
            (pr-str (pr-str {:namespaces (vec namespaces)})))))
 
 (defn- run-eastwood [dir runner namespaces linters]
-  (let [eastwood-result (if (= runner :leiningen) (run-eastwood-lein dir namespaces linters) (run-eastwood-clj dir namespaces linters))]
+  (let [eastwood-result (if (= runner :leiningen)
+                          (run-eastwood-lein dir namespaces linters)
+                          (run-eastwood-clj dir namespaces linters))]
     (->> (cstr/split-lines (:out eastwood-result))
          (map (fn [line]
-                (when-let [matches (re-matches #"^(.*?)\:(\d*?)\:(\d*?)\:(.*?)\:(.*)" line)]
+                (when-let [matches
+                           (re-matches #"^(.*?)\:(\d*?)\:(\d*?)\:(.*?)\:(.*)"
+                                       line)]
                   (let [message (str "[eastwood]"
                                      "[" (cstr/trim (nth matches 4)) "]"
                                      (nth matches 5))]
@@ -177,14 +192,17 @@
                       (str
                        "cd " dir ";"
                        "clojure "
-                       "-Sdeps " "\" {:deps {tvaughan/kibit-runner {:mvn/version \\\"RELEASE\\\" }}}\" "
+                       "-Sdeps "
+                       "\" {:deps {tvaughan/kibit-runner "
+                       "{:mvn/version \\\"RELEASE\\\" }}}\" "
                        " -m  " "kibit-runner.cmdline " (cstr/join " " files)))]
     (->> (cstr/split (:out kibit-result) #"\n\n")
          (map (fn [line]
                 (let [message-lines (cstr/split-lines line)
                       first-line (first message-lines)
                       message (cstr/join "\n" (next message-lines))]
-                  (when-let [line-decompose (re-matches #"At (.*?):(\d*?):$" first-line)]
+                  (when-let [line-decompose
+                             (re-matches #"At (.*?):(\d*?):$" first-line)]
                     {:path (join-path relative-dir (second line-decompose))
                      :start_line (Integer/valueOf (nth line-decompose 2))
                      :annotation_level "warning"
@@ -208,11 +226,13 @@
   (->> option
        (map (fn [[k v]]
               (cond
-                (= [k v] [:linters "all"]) [:linters ["eastwood" "cljfmt" "kibit" "clj-kondo"]]
+                (= [k v] [:linters "all"])
+                [:linters ["eastwood" "cljfmt" "kibit" "clj-kondo"]]
                 :else [k v])))
        (into {})))
 
-(defn- run-linters [{:keys [linters cwd relative-dir file-target runner git-sha use-files files eastwood-linters]}]
+(defn- run-linters [{:keys [linters cwd relative-dir file-target runner
+                            git-sha use-files files eastwood-linters]}]
   (when-not (coll? linters) (throw (ex-info "Invalid linters." {})))
   (let [dir (join-path cwd relative-dir)
         relative-files (cond
@@ -227,7 +247,8 @@
                         (filter identity))]
     (when (seq relative-files)
       (mapcat #(case %
-                 "eastwood" (run-eastwood dir runner namespaces eastwood-linters)
+                 "eastwood"
+                 (run-eastwood dir runner namespaces eastwood-linters)
                  "kibit" (run-kibit dir relative-files relative-dir)
                  "cljfmt" (run-cljfmt absolute-files dir' relative-dir)
                  "clj-kondo" (run-clj-kondo dir relative-files relative-dir))
