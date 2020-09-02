@@ -108,7 +108,7 @@
         (sh "sh" "-c"
             (str "cd " dir ";"
                  "/usr/local/bin/clj-kondo " "--lint "
-                 (cstr/join relative-files)))
+                 (cstr/join \: relative-files)))
         result-lines
         (when (or (= (:exit kondo-result) 2) (= (:exit kondo-result) 3))
           (cstr/split-lines (:out kondo-result)))]
