@@ -25,38 +25,55 @@
    "User-Agent" "clj-lint"})
 
 (defn- start-action []
-  (let [post-result (client/post (str "https://api.github.com/repos/"
-                                      (env :github-repository)
-                                      "/check-runs")
-                                 {:headers (make-header)
-                                  :content-type :json
-                                  :body
-                                  (cheshire/generate-string
-                                   {:name check-name
-                                    :head_sha (env :github-sha)
-                                    :status "in_progress"
-                                    :started_at (str (clj-time/now))})})]
+  (let [url (str "https://api.github.com/repos/"
+                 (env :github-repository) "/check-runs")
+        body (cheshire/generate-string
+              {:name check-name
+               :head_sha (env :github-sha)
+               :status "in_progress"
+               :started_at (str (clj-time/now))})
+        post-result
+        (try (client/post url
+                          {:headers (make-header)
+                           :content-type :json
+                           :body body})
+             (catch Exception e
+               (binding [*out* *err*]
+                 (println ["HTTP ERROR"
+                           (:status (ex-data e))
+                           "Creating the check run."
+                           {:url url
+                            :token (env :input-github-token)
+                            :body body}]))
+               (System/exit 1)))]
     (get (cheshire/parse-string (:body post-result)) "id")))
 
 (defn- update-action [id conclusion output max-annotation]
-  (client/patch
-   (str "https://api.github.com/repos/"
-        (env :github-repository)
-        "/check-runs/"
-        id)
-   {:headers (make-header)
-    :content-type :json
-    :body
-    (cheshire/generate-string
-     {:name check-name
-      :head_sha (env :github-sha)
-      :status "completed"
-      :completed_at (str (clj-time/now))
-      :conclusion conclusion
-      :output
-      {:title check-name
-       :summary "Results of linters."
-       :annotations (take max-annotation output)}})}))
+  (let [url (str "https://api.github.com/repos/"
+                 (env :github-repository) "/check-runs/" id)
+        body
+        (cheshire/generate-string
+         {:name check-name
+          :head_sha (env :github-sha)
+          :status "completed"
+          :completed_at (str (clj-time/now))
+          :conclusion conclusion
+          :output
+          {:title check-name
+           :summary "Results of linters."
+           :annotations (take max-annotation output)}})]
+    (try (client/patch url {:headers (make-header)
+                            :content-type :json
+                            :body body})
+         (catch Exception e
+           (binding [*out* *err*]
+             (println ["HTTP ERROR"
+                       (:status (ex-data e))
+                       "update the check run."
+                       {:url url
+                        :token (env :input-github-token)
+                        :body body}]))
+           (System/exit 1)))))
 
 (defn- get-files [dir]
   (let [files (sh "find" dir "-name" "*.clj" "-printf" "%P\n")]
