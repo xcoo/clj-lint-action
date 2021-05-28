@@ -1,6 +1,6 @@
 FROM alpine:3.10
 
-FROM borkdude/clj-kondo AS clj-kondo
+FROM cljkondo/clj-kondo AS clj-kondo
 
 FROM clojure AS lein
 FROM clojure:tools-deps-alpine
