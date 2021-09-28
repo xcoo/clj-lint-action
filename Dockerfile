@@ -19,4 +19,6 @@ COPY LICENSE README.md /
 COPY entrypoint.sh /entrypoint.sh
 COPY lib /lint-action-clj
 
+RUN cd /lint-action-clj && clojure -Stree -P && rm -r .cpcache
+
 ENTRYPOINT ["/entrypoint.sh"]
