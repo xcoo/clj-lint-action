@@ -118,7 +118,7 @@
   (sh "sh" "-c"
       (str "cd " dir ";"
            "lein "
-           " update-in :plugins conj \"[jonase/eastwood \\\"0.3.5\\\"]\" "
+           " update-in :plugins conj \"[jonase/eastwood \\\"RELEASE\\\"]\" "
            "-- update-in :eastwood assoc :linters "  (pr-str (pr-str linters))
            " -- eastwood "
            (pr-str (pr-str {:namespaces (vec namespaces)})))))
