@@ -104,43 +104,42 @@
 
 (defn- run-eastwood-clj [dir namespaces linters]
   (sh "sh" "-c"
-      (str
-       "cd " dir ";"
-       "clojure "
-       "-Sdeps " "\" {:deps {jonase/eastwood "
-       "{:mvn/version \\\"RELEASE\\\" }}}\" "
-       " -m  " "eastwood.lint "
-       (pr-str (pr-str {:source-paths ["src"]
-                        :linters linters
-                        :namespaces namespaces})))))
+      (cstr/join
+       \space
+       ["cd" dir ";"
+        "clojure"
+        "-Sdeps"
+        (pr-str (pr-str {:deps {'jonase/eastwood {:mvn/version "RELEASE"}}}))
+        "-m"
+        "eastwood.lint"
+        (pr-str (pr-str {:source-paths ["src"]
+                         :linters linters
+                         :namespaces namespaces}))])))
 
 (defn- run-eastwood-lein [dir namespaces linters]
   (sh "sh" "-c"
-      (str "cd " dir ";"
-           "lein "
-           " update-in :plugins conj \"[jonase/eastwood \\\"RELEASE\\\"]\" "
-           "-- update-in :eastwood assoc :linters "  (pr-str (pr-str linters))
-           " -- eastwood "
-           (pr-str (pr-str {:namespaces (vec namespaces)})))))
+      (cstr/join
+       \space
+       ["cd" dir ";"
+        "lein"
+        "update-in" :plugins "conj"
+        (pr-str (pr-str ['jonase/eastwood "RELEASE"])) "--"
+        "update-in" :eastwood "assoc" :linters
+        (pr-str (pr-str linters)) "--"
+        "eastwood"
+        (pr-str (pr-str {:namespaces (vec namespaces)}))])))
 
 (defn- run-eastwood [dir runner namespaces linters]
   (let [eastwood-result (if (= runner :leiningen)
                           (run-eastwood-lein dir namespaces linters)
                           (run-eastwood-clj dir namespaces linters))]
-    (->> (cstr/split-lines (:out eastwood-result))
-         (map (fn [line]
-                (when-let [matches
-                           (re-matches #"^(.*?)\:(\d*?)\:(\d*?)\:(.*?)\:(.*)"
-                                       line)]
-                  (let [message (str "[eastwood]"
-                                     "[" (cstr/trim (nth matches 4)) "]"
-                                     (nth matches 5))]
-                    {:path (second matches)
-                     :start-line (Integer/valueOf (nth matches 2))
-                     :end-line (Integer/valueOf (nth matches 2))
-                     :annotation-level "warning"
-                     :message message}))))
-         (filter identity))))
+    (for [line (cstr/split-lines (:out eastwood-result))
+          :let [[_ path line-num _col-num linter message :as matches]
+                (re-matches #"(.*?)\:(\d*?)\:(\d*?)\:(.*?)\:(.*)" line)]
+          :when matches]
+      {:path path, :start-line (Integer/valueOf line-num),
+       :end-line (Integer/valueOf line-num), :annotation-level "warning",
+       :message (str "[eastwood]" "[" (cstr/trim linter) "]" message)})))
 
 (defn- run-kibit [dir files relative-dir]
   (let [kibit-result (sh
