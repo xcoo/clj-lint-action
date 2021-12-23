@@ -75,9 +75,9 @@
                             #"^(.*?)\:(\d*?)\:(\d*?)\:([a-z ]*)\:(.*)"
                             line)]
                    {:path (str relative-dir "/" (second matches))
-                    :start_line (Integer/valueOf (nth matches 2))
-                    :end_line (Integer/valueOf (nth matches 2))
-                    :annotation_level "warning"
+                    :start-line (Integer/valueOf (nth matches 2))
+                    :end-line (Integer/valueOf (nth matches 2))
+                    :annotation-level "warning"
                     :message
                     (str "[clj-kondo]" (nth matches 5))}))))))
 
@@ -97,9 +97,9 @@
                   (let [file (join-path relative-dir
                                         (subs line (count (str "--- a" cwd))))]
                     {:path file
-                     :start_line 0
-                     :end_line 0
-                     :annotation_level "warning"
+                     :start-line 0
+                     :end-line 0
+                     :annotation-level "warning"
                      :message (str "[cljfmt] cljfmt fail." file)})))))))
 
 (defn- run-eastwood-clj [dir namespaces linters]
@@ -136,9 +136,9 @@
                                      "[" (cstr/trim (nth matches 4)) "]"
                                      (nth matches 5))]
                     {:path (second matches)
-                     :start_line (Integer/valueOf (nth matches 2))
-                     :end_line (Integer/valueOf (nth matches 2))
-                     :annotation_level "warning"
+                     :start-line (Integer/valueOf (nth matches 2))
+                     :end-line (Integer/valueOf (nth matches 2))
+                     :annotation-level "warning"
                      :message message}))))
          (filter identity))))
 
@@ -160,9 +160,9 @@
                   (when-let [line-decompose
                              (re-matches #"At (.*?):(\d*?):$" first-line)]
                     {:path (join-path relative-dir (second line-decompose))
-                     :start_line (Integer/valueOf (nth line-decompose 2))
-                     :annotation_level "warning"
-                     :end_line (Integer/valueOf (nth line-decompose 2))
+                     :start-line (Integer/valueOf (nth line-decompose 2))
+                     :annotation-level "warning"
+                     :end-line (Integer/valueOf (nth line-decompose 2))
                      :message (str "[kibit]\n" message)}))))
          (filter identity))))
 
@@ -225,7 +225,7 @@
 
 (defn- output-lint-result [lint-result]
   (doseq [annotation lint-result]
-    (println (format "%s:%d" (:path annotation) (:start_line annotation)))
+    (println (format "%s:%d" (:path annotation) (:start-line annotation)))
     (println (:message annotation))
     (println "")))
 
