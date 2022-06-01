@@ -14,6 +14,7 @@ Run some linters such as clj-kondo , kibit , eastwood and show results as warnin
         runner: ":leiningen"
         base_sha: ${{ github.event.pull_request.base.sha||github.event.before }}
         eastwood_linters: "[:all]"
+        eastwood_args: "{}"
 ```
 
 ## about 'linters'
