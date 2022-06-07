@@ -59,12 +59,14 @@
        (apply concat)
        (cstr/join "/")))
 
-(defn- run-clj-kondo [dir relative-files relative-dir]
-  (let [kondo-result
-        (sh "sh" "-c"
-            (str "cd " dir ";"
+(defn- run-clj-kondo [dir relative-files relative-dir options]
+  (let [options (if options options {})
+        command (str "cd " dir ";"
                  "/usr/local/bin/clj-kondo " "--lint "
-                 (cstr/join \: relative-files)))
+                 (cstr/join \: relative-files)
+                 " --config " (pr-str (pr-str options)))
+        kondo-result
+        (sh "sh" "-c" command)
         result-lines
         (when (or (= (:exit kondo-result) 2) (= (:exit kondo-result) 3))
           (cstr/split-lines (:out kondo-result)))]
@@ -102,7 +104,7 @@
                      :annotation-level "warning"
                      :message (str "[cljfmt] cljfmt fail." file)})))))))
 
-(defn- run-eastwood-clj [dir namespaces linters eastwood-args]
+(defn- run-eastwood-clj [dir namespaces linters options]
   (sh "sh" "-c"
       (cstr/join
        \space
@@ -115,9 +117,9 @@
         (pr-str (pr-str (merge {:source-paths ["src"]
                                 :linters linters
                                 :namespaces namespaces}
-                               eastwood-args)))])))
+                               options)))])))
 
-(defn- run-eastwood-lein [dir namespaces linters eastwood-args]
+(defn- run-eastwood-lein [dir namespaces linters options]
   (sh "sh" "-c"
       (cstr/join
        \space
@@ -129,14 +131,14 @@
         (pr-str (pr-str linters)) "--"
         "eastwood"
         (pr-str (pr-str (merge {:namespaces (vec namespaces)}
-                               eastwood-args)))])))
+                               options)))])))
 
-(defn- run-eastwood [dir runner namespaces linters eastwood-args]
+(defn- run-eastwood [dir runner namespaces linters options]
   (let [eastwood-result (if (= runner :leiningen)
                           (run-eastwood-lein dir namespaces
-                                             linters eastwood-args)
+                                             linters options)
                           (run-eastwood-clj dir namespaces
-                                            linters eastwood-args))]
+                                            linters options))]
     (for [line (cstr/split-lines (:out eastwood-result))
           :let [[_ path line-num _col-num linter message :as matches]
                 (re-matches #"(.*?)\:(\d*?)\:(\d*?)\:(.*?)\:(.*)" line)]
@@ -180,7 +182,7 @@
                      :git-sha "HEAD~"
                      :eastwood-linters eastwood-linters
                      :runner :clojure
-                     :eastwood-args nil})
+                     :linter-options nil})
 
 (defn- fix-option [option]
   (->> option
@@ -193,7 +195,7 @@
 
 (defn- run-linters [{:keys [linters cwd relative-dir file-target runner
                             git-sha use-files files eastwood-linters
-                            eastwood-args]}]
+                            linter-options]}]
   (when-not (coll? linters) (throw (ex-info "Invalid linters." {})))
   (let [dir (join-path cwd relative-dir)
         relative-files (cond
@@ -205,15 +207,17 @@
         relative-dir (if (empty? relative-dir) "." relative-dir)
         namespaces (->> relative-files
                         (map filename->namespace)
-                        (filter identity))
-        eastwood-args (when eastwood-args  eastwood-args)]
+                        (filter identity))]
     (when (seq relative-files)
       (mapcat #(case %
                  "eastwood"
-                 (run-eastwood dir runner namespaces eastwood-linters eastwood-args)
+                 (run-eastwood dir runner namespaces
+                               eastwood-linters (:eastwood linter-options))
                  "kibit" (run-kibit dir relative-files relative-dir)
                  "cljfmt" (run-cljfmt absolute-files dir' relative-dir)
-                 "clj-kondo" (run-clj-kondo dir relative-files relative-dir))
+                 "clj-kondo"
+                 (run-clj-kondo dir relative-files
+                                relative-dir (:clj-kondo linter-options)))
               linters))))
 
 (defn- external-run [option]

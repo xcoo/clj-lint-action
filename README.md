@@ -14,7 +14,7 @@ Run some linters such as clj-kondo , kibit , eastwood and show results as warnin
         runner: ":leiningen"
         base_sha: ${{ github.event.pull_request.base.sha||github.event.before }}
         eastwood_linters: "[:all]"
-        eastwood_args: "{}"
+        linter_options: "{}"
 ```
 
 ## about 'linters'
@@ -23,4 +23,11 @@ if you want to select linters,set variable 'linters' like this.
 
 ```yaml
         linters: "[\"clj-kondo\" \"kibit\" \"eastwood\" \"cljfmt\"]"
+```
+
+## about `linter_options`
+`linter_options` is the options for clj-kondo and eastwood.
+```
+linter_options: "{:clj-kondo {:linters {:redundant-let {:level :info}}}\
+                  :eastwood {:exclude-namespaces [tmp-clj.core2]}}"
 ```

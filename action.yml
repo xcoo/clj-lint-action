@@ -20,8 +20,8 @@ inputs:
   eastwood_linters:
       description: 'Eastwood linters'
       default: '[:bad-arglists :constant-test :def-in-def :deprecations :keyword-typos :local-shadows-var :misplaced-docstrings :no-ns-form-found :redefd-vars :suspicious-expression :suspicious-test :unlimited-use :unused-fn-args :unused-locals :unused-meta-on-macro :unused-namespaces :unused-private-vars :unused-ret-vals :unused-ret-vals-in-try :wrong-arity :wrong-ns-form :wrong-pre-post :wrong-tag]'
-  eastwood_args:
-      description: 'Eastwood args'
+  linter_options:
+      description: 'Linter options'
       default: '{}'
 runs:
   using: 'docker'
@@ -32,4 +32,4 @@ runs:
     - ${{ inputs.runner }}
     - ${{ inputs.base_sha }}
     - ${{ inputs.eastwood_linters }}
-    - ${{ inputs.eastwood_args }}
+    - ${{ inputs.linter_options }}
