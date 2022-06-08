@@ -1,7 +1,5 @@
-FROM cljkondo/clj-kondo:2022.05.31-alpine AS clj-kondo
 FROM clojure:tools-deps-alpine
-
-COPY --from=clj-kondo /bin/clj-kondo /usr/local/bin/clj-kondo
+COPY --from=cljkondo/clj-kondo:2022.05.31-alpine /bin/clj-kondo /usr/local/bin/clj-kondo
 
 RUN apk add git
 
