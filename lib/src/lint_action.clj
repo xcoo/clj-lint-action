@@ -22,21 +22,18 @@
 (defn- get-diff-files [dir git-sha]
   (let [commit-count (->> (sh "sh"
                               "-c"
-                              (str "cd "
-                                   dir
-                                   ";"
-                                   "git log  --oneline --no-merges | wc -l"))
+                              (str "git log  --oneline --no-merges | wc -l")
+                              :dir dir)
                           :out
                           cstr/split-lines
                           first
                           Integer/valueOf)]
     (if (< commit-count 2)
       (get-files dir)
-      (->> (sh "sh" "-c" (str "cd " dir ";"
-                              "git diff --name-only --relative " git-sha))
+      (->> (sh "git" "diff" "--relative" git-sha :dir dir)
            :out
            cstr/split-lines
-           (filter #(re-matches #"--- a(.*clj)$" %))))))
+           (keep #(second (re-matches #"\+\+\+ b/(.*clj)$" %)))))))
 
 (defn- filename->namespace [filename]
   (let [splited-name (cstr/split (cstr/replace filename #".clj$" "")
@@ -61,12 +58,10 @@
 
 (defn- run-clj-kondo [dir relative-files relative-dir options]
   (let [options (if options options {})
-        command (str "cd " dir ";"
-                 "/usr/local/bin/clj-kondo " "--lint "
-                 (cstr/join \: relative-files)
-                 " --config " (pr-str (pr-str options)))
-        kondo-result
-        (sh "sh" "-c" command)
+        command ["/usr/local/bin/clj-kondo"
+                 "--lint" (cstr/join \: relative-files)
+                 "--config" (pr-str options)]
+        kondo-result (apply sh (concat command [:dir dir]))
         result-lines
         (when (or (= (:exit kondo-result) 2) (= (:exit kondo-result) 3))
           (cstr/split-lines (:out kondo-result)))]
@@ -84,13 +79,11 @@
                     (str "[clj-kondo]" (nth matches 5))}))))))
 
 (defn- run-cljfmt [files cwd relative-dir]
-  (let [cljfmt-result (sh "sh"
-                          "-c"
-                          (str
-                           "clojure -Sdeps \"{:deps {cljfmt "
-                           "{:mvn/version \\\"RELEASE\\\" }}}\" "
-                           " -m cljfmt.main check "
-                           (cstr/join " " files)))]
+  (let [cljfmt-result (sh "clojure"
+                          "-Sdeps" (str {:deps {'cljfmt {:mvn/version "RELEASE"}}})
+                          "-m"
+                          "cljfmt.main" "check"
+                          (cstr/join " " files))]
     (when-not (zero? (:exit cljfmt-result))
       (->> (:err cljfmt-result)
            cstr/split-lines
@@ -105,33 +98,27 @@
                      :message (str "[cljfmt] cljfmt fail." file)})))))))
 
 (defn- run-eastwood-clj [dir namespaces linters options]
-  (sh "sh" "-c"
-      (cstr/join
-       \space
-       ["cd" dir ";"
-        "clojure"
-        "-Sdeps"
-        (pr-str (pr-str {:deps {'jonase/eastwood {:mvn/version "RELEASE"}}}))
-        "-m"
-        "eastwood.lint"
-        (pr-str (pr-str (merge {:source-paths ["src"]
-                                :linters linters
-                                :namespaces namespaces}
-                               options)))])))
+  (sh "clojure"
+      "-Sdeps"
+      (pr-str {:deps {'jonase/eastwood {:mvn/version "RELEASE"}}})
+      "-m"
+      "eastwood.lint"
+      (pr-str (merge {:source-paths ["src"]
+                      :linters linters
+                      :namespaces namespaces}
+                     options))
+      :dir dir))
 
 (defn- run-eastwood-lein [dir namespaces linters options]
-  (sh "sh" "-c"
-      (cstr/join
-       \space
-       ["cd" dir ";"
-        "lein"
-        "update-in" :plugins "conj"
-        (pr-str (pr-str ['jonase/eastwood "RELEASE"])) "--"
-        "update-in" :eastwood "assoc" :linters
-        (pr-str (pr-str linters)) "--"
-        "eastwood"
-        (pr-str (pr-str (merge {:namespaces (vec namespaces)}
-                               options)))])))
+  (sh "lein"
+      "update-in" ":plugins" "conj" (pr-str ['jonase/eastwood "RELEASE"])
+      "--"
+      "update-in" ":eastwood" "assoc" ":linters" (pr-str linters)
+      "--"
+      "eastwood"
+      (pr-str (merge {:namespaces (vec namespaces)}
+                     options))
+      :dir dir))
 
 (defn- run-eastwood [dir runner namespaces linters options]
   (let [eastwood-result (if (= runner :leiningen)
@@ -148,15 +135,13 @@
        :message (str "[eastwood]" "[" (cstr/trim linter) "]" message)})))
 
 (defn- run-kibit [dir files relative-dir]
-  (let [kibit-result (sh
-                      "sh" "-c"
-                      (str
-                       "cd " dir ";"
-                       "clojure "
-                       "-Sdeps "
-                       "\" {:deps {tvaughan/kibit-runner "
-                       "{:mvn/version \\\"RELEASE\\\" }}}\" "
-                       " -m  " "kibit-runner.cmdline " (cstr/join " " files)))]
+  (let [kibit-result
+        (sh "clojure"
+            "-Sdeps"
+            (pr-str {:deps {'tvaughan/kibit-runner
+                            {:mvn/version "RELEASE"}}})
+            "-m" "kibit-runner.cmdline" (cstr/join " " files)
+            :dir dir)]
     (->> (cstr/split (:out kibit-result) #"\n\n")
          (map (fn [line]
                 (let [message-lines (cstr/split-lines line)
