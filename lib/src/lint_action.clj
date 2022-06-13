@@ -22,21 +22,18 @@
 (defn- get-diff-files [dir git-sha]
   (let [commit-count (->> (sh "sh"
                               "-c"
-                              (str "cd "
-                                   dir
-                                   ";"
-                                   "git log  --oneline --no-merges | wc -l"))
+                              (str "git log  --oneline --no-merges | wc -l")
+                              :dir dir)
                           :out
                           cstr/split-lines
                           first
                           Integer/valueOf)]
     (if (< commit-count 2)
       (get-files dir)
-      (->> (sh "sh" "-c" (str "cd " dir ";"
-                              "git diff --name-only --relative " git-sha))
+      (->> (sh "git" "diff" "--relative" git-sha :dir dir)
            :out
            cstr/split-lines
-           (filter #(re-matches #"--- a(.*clj)$" %))))))
+           (keep #(second (re-matches #"\+\+\+ b/(.*clj)$" %)))))))
 
 (defn- filename->namespace [filename]
   (let [splited-name (cstr/split (cstr/replace filename #".clj$" "")
@@ -59,12 +56,12 @@
        (apply concat)
        (cstr/join "/")))
 
-(defn- run-clj-kondo [dir relative-files relative-dir]
-  (let [kondo-result
-        (sh "sh" "-c"
-            (str "cd " dir ";"
-                 "/usr/local/bin/clj-kondo " "--lint "
-                 (cstr/join \: relative-files)))
+(defn- run-clj-kondo [dir relative-files relative-dir options]
+  (let [options (if options options {})
+        command ["/usr/local/bin/clj-kondo"
+                 "--lint" (cstr/join \: relative-files)
+                 "--config" (pr-str options)]
+        kondo-result (apply sh (concat command [:dir dir]))
         result-lines
         (when (or (= (:exit kondo-result) 2) (= (:exit kondo-result) 3))
           (cstr/split-lines (:out kondo-result)))]
@@ -82,13 +79,11 @@
                     (str "[clj-kondo]" (nth matches 5))}))))))
 
 (defn- run-cljfmt [files cwd relative-dir]
-  (let [cljfmt-result (sh "sh"
-                          "-c"
-                          (str
-                           "clojure -Sdeps \"{:deps {cljfmt "
-                           "{:mvn/version \\\"RELEASE\\\" }}}\" "
-                           " -m cljfmt.main check "
-                           (cstr/join " " files)))]
+  (let [cljfmt-result (sh "clojure"
+                          "-Sdeps" (str {:deps {'cljfmt {:mvn/version "RELEASE"}}})
+                          "-m"
+                          "cljfmt.main" "check"
+                          (cstr/join " " files))]
     (when-not (zero? (:exit cljfmt-result))
       (->> (:err cljfmt-result)
            cstr/split-lines
@@ -102,37 +97,35 @@
                      :annotation-level "warning"
                      :message (str "[cljfmt] cljfmt fail." file)})))))))
 
-(defn- run-eastwood-clj [dir namespaces linters]
-  (sh "sh" "-c"
-      (cstr/join
-       \space
-       ["cd" dir ";"
-        "clojure"
-        "-Sdeps"
-        (pr-str (pr-str {:deps {'jonase/eastwood {:mvn/version "RELEASE"}}}))
-        "-m"
-        "eastwood.lint"
-        (pr-str (pr-str {:source-paths ["src"]
-                         :linters linters
-                         :namespaces namespaces}))])))
+(defn- run-eastwood-clj [dir namespaces linters options]
+  (sh "clojure"
+      "-Sdeps"
+      (pr-str {:deps {'jonase/eastwood {:mvn/version "RELEASE"}}})
+      "-m"
+      "eastwood.lint"
+      (pr-str (merge {:source-paths ["src"]
+                      :linters linters
+                      :namespaces namespaces}
+                     options))
+      :dir dir))
 
-(defn- run-eastwood-lein [dir namespaces linters]
-  (sh "sh" "-c"
-      (cstr/join
-       \space
-       ["cd" dir ";"
-        "lein"
-        "update-in" :plugins "conj"
-        (pr-str (pr-str ['jonase/eastwood "RELEASE"])) "--"
-        "update-in" :eastwood "assoc" :linters
-        (pr-str (pr-str linters)) "--"
-        "eastwood"
-        (pr-str (pr-str {:namespaces (vec namespaces)}))])))
+(defn- run-eastwood-lein [dir namespaces linters options]
+  (sh "lein"
+      "update-in" ":plugins" "conj" (pr-str ['jonase/eastwood "RELEASE"])
+      "--"
+      "update-in" ":eastwood" "assoc" ":linters" (pr-str linters)
+      "--"
+      "eastwood"
+      (pr-str (merge {:namespaces (vec namespaces)}
+                     options))
+      :dir dir))
 
-(defn- run-eastwood [dir runner namespaces linters]
+(defn- run-eastwood [dir runner namespaces linters options]
   (let [eastwood-result (if (= runner :leiningen)
-                          (run-eastwood-lein dir namespaces linters)
-                          (run-eastwood-clj dir namespaces linters))]
+                          (run-eastwood-lein dir namespaces
+                                             linters options)
+                          (run-eastwood-clj dir namespaces
+                                            linters options))]
     (for [line (cstr/split-lines (:out eastwood-result))
           :let [[_ path line-num _col-num linter message :as matches]
                 (re-matches #"(.*?)\:(\d*?)\:(\d*?)\:(.*?)\:(.*)" line)]
@@ -142,15 +135,13 @@
        :message (str "[eastwood]" "[" (cstr/trim linter) "]" message)})))
 
 (defn- run-kibit [dir files relative-dir]
-  (let [kibit-result (sh
-                      "sh" "-c"
-                      (str
-                       "cd " dir ";"
-                       "clojure "
-                       "-Sdeps "
-                       "\" {:deps {tvaughan/kibit-runner "
-                       "{:mvn/version \\\"RELEASE\\\" }}}\" "
-                       " -m  " "kibit-runner.cmdline " (cstr/join " " files)))]
+  (let [kibit-result
+        (sh "clojure"
+            "-Sdeps"
+            (pr-str {:deps {'tvaughan/kibit-runner
+                            {:mvn/version "RELEASE"}}})
+            "-m" "kibit-runner.cmdline" (cstr/join " " files)
+            :dir dir)]
     (->> (cstr/split (:out kibit-result) #"\n\n")
          (map (fn [line]
                 (let [message-lines (cstr/split-lines line)
@@ -175,7 +166,8 @@
                      :max-annotation 50
                      :git-sha "HEAD~"
                      :eastwood-linters eastwood-linters
-                     :runner :clojure})
+                     :runner :clojure
+                     :linter-options nil})
 
 (defn- fix-option [option]
   (->> option
@@ -187,7 +179,8 @@
        (into {})))
 
 (defn- run-linters [{:keys [linters cwd relative-dir file-target runner
-                            git-sha use-files files eastwood-linters]}]
+                            git-sha use-files files eastwood-linters
+                            linter-options]}]
   (when-not (coll? linters) (throw (ex-info "Invalid linters." {})))
   (let [dir (join-path cwd relative-dir)
         relative-files (cond
@@ -203,10 +196,13 @@
     (when (seq relative-files)
       (mapcat #(case %
                  "eastwood"
-                 (run-eastwood dir runner namespaces eastwood-linters)
+                 (run-eastwood dir runner namespaces
+                               eastwood-linters (:eastwood linter-options))
                  "kibit" (run-kibit dir relative-files relative-dir)
                  "cljfmt" (run-cljfmt absolute-files dir' relative-dir)
-                 "clj-kondo" (run-clj-kondo dir relative-files relative-dir))
+                 "clj-kondo"
+                 (run-clj-kondo dir relative-files
+                                relative-dir (:clj-kondo linter-options)))
               linters))))
 
 (defn- external-run [option]
