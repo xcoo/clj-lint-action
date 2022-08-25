@@ -1,7 +1,23 @@
-FROM clojure:tools-deps-alpine
-COPY --from=cljkondo/clj-kondo:2022.05.31-alpine /bin/clj-kondo /usr/local/bin/clj-kondo
+FROM ghcr.io/graalvm/native-image:22.2.0 AS build-clj-kondo
 
-RUN apk add git
+RUN microdnf install -y gzip tar && \
+    curl -LO  https://github.com/clj-kondo/clj-kondo/archive/refs/tags/v2022.08.03.tar.gz && \
+    gunzip v2022.08.03.tar.gz && \
+    tar -xvf v2022.08.03.tar
+
+WORKDIR /app/clj-kondo-2022.08.03/
+ENV GRAALVM_HOME /usr
+
+RUN curl -o /usr/local/bin/lein https://raw.githubusercontent.com/technomancy/leiningen/stable/bin/lein && \
+    chmod +x /usr/local/bin/lein
+
+#for ARM
+ENV PATH /usr/bin:$PATH
+RUN script/compile && \
+    mv ./clj-kondo /
+
+FROM clojure:tools-deps-jammy
+COPY --from=build-clj-kondo /clj-kondo /usr/local/bin/clj-kondo
 
 ADD https://raw.github.com/technomancy/leiningen/stable/bin/lein /usr/local/bin/lein
 RUN chmod 744 /usr/local/bin/lein
@@ -10,6 +26,8 @@ COPY entrypoint.sh /entrypoint.sh
 COPY lib /lint-action-clj
 
 WORKDIR /lint-action-clj
-RUN clojure -Stree -P && rm -r .cpcache
 
+#for ARM
+ENV PATH /usr/bin:$PATH
+RUN clojure -Stree -P && rm -r .cpcache
 ENTRYPOINT ["/entrypoint.sh"]
