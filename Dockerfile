@@ -1,5 +1,17 @@
+FROM ghcr.io/graalvm/graalvm-ce AS build-clj-kondo
+
+RUN curl -LO  https://github.com/clj-kondo/clj-kondo/archive/refs/tags/v2022.08.03.tar.gz
+RUN curl -o /usr/local/bin/lein https://raw.githubusercontent.com/technomancy/leiningen/stable/bin/lein
+RUN gu install native-image
+RUN tar -xzvf v2022.08.03.tar.gz
+ENV GRAALVM_HOME /usr
+RUN chmod +x /usr/local/bin/lein
+WORKDIR clj-kondo-2022.08.03/
+RUN script/compile
+RUN mv ./clj-kondo /
+
 FROM clojure:tools-deps-alpine
-COPY --from=cljkondo/clj-kondo:2022.05.31-alpine /bin/clj-kondo /usr/local/bin/clj-kondo
+COPY --from=build-clj-kondo /clj-kondo /usr/local/bin/clj-kondo
 
 RUN apk add git
 
