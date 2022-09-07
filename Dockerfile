@@ -18,9 +18,8 @@ RUN script/compile && \
 
 FROM clojure:tools-deps-jammy
 COPY --from=build-clj-kondo /clj-kondo /usr/local/bin/clj-kondo
-
-ADD https://raw.github.com/technomancy/leiningen/stable/bin/lein /usr/local/bin/lein
-RUN chmod 744 /usr/local/bin/lein
+COPY --from=build-clj-kondo /usr/local/bin/lein /usr/local/bin/lein
+RUN chmod +x /usr/local/bin/lein
 
 COPY entrypoint.sh /entrypoint.sh
 COPY lib /lint-action-clj
