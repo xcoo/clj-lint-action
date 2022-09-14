@@ -1,6 +1,7 @@
 #!/bin/sh -l
 
 BRANCH_NAME=${GITHUB_REF#refs/heads/}
+git config --global --add safe.directory /github/workspace
 
 if [ -n "$4" ] && [ "$4" != "0000000000000000000000000000000000000000" ]
 then
