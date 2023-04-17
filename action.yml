@@ -25,7 +25,7 @@ inputs:
       default: '{}'
 runs:
   using: 'docker'
-  image: 'docker://xcoo/clj-lint-action:latest'
+  image: 'docker://xcoo/clj-lint-action:0.1.12'
   args:
     - ${{ inputs.linters }}
     - ${{ inputs.sourceroot }}
