@@ -2,8 +2,10 @@ name: deploy
 
 on:
   push:
-    branches:
-      - 'master'
+    branches-ignore:
+      - '**'
+    tags:
+      - 'v*'
 
 jobs:
   build:
@@ -37,4 +39,4 @@ jobs:
         with:
           push: true
           platforms: linux/amd64,linux/arm64
-          tags: xcoo/clj-lint-action:latest
+          tags: ${{ steps.meta.outputs.tags }}
