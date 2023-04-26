@@ -1,11 +1,11 @@
 FROM ghcr.io/graalvm/native-image:22.2.0 AS build-clj-kondo
 
 RUN microdnf install -y gzip tar && \
-    curl -LO  https://github.com/clj-kondo/clj-kondo/archive/refs/tags/v2022.08.03.tar.gz && \
-    gunzip v2022.08.03.tar.gz && \
-    tar -xvf v2022.08.03.tar
+    curl -LO  https://github.com/clj-kondo/clj-kondo/archive/refs/tags/v2023.04.14.tar.gz && \
+    gunzip v2023.04.14.tar.gz && \
+    tar -xvf v2023.04.14.tar
 
-WORKDIR /app/clj-kondo-2022.08.03/
+WORKDIR /app/clj-kondo-2023.04.14/
 ENV GRAALVM_HOME /usr
 
 RUN curl -o /usr/local/bin/lein https://raw.githubusercontent.com/technomancy/leiningen/stable/bin/lein && \
