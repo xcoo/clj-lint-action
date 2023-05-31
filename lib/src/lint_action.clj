@@ -16,8 +16,8 @@
 
 (defn- get-files [dir]
   (let [files (sh "find" dir
-                  "-name" "*.clj" "-printf" "%P\n"
-                  "-or" "-name" "*.clj?" "-printf" "%P\n")]
+                  "(" "-name" "*.clj" "-or" "-name" "*.clj[cs]" ")"
+                  "-printf" "%P\n")]
     (when (zero? (:exit files))
       (cstr/split-lines (:out files)))))
 
