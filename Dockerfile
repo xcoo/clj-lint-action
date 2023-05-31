@@ -17,7 +17,7 @@ ENV PATH /usr/bin:$PATH
 RUN script/compile && \
     mv ./clj-kondo /
 
-FROM clojure:tools-deps-jammy
+FROM clojure:temurin-20-tools-deps-jammy
 COPY --from=build-clj-kondo /clj-kondo /usr/local/bin/clj-kondo
 COPY --from=build-clj-kondo /usr/local/bin/lein /usr/local/bin/lein
 RUN chmod +x /usr/local/bin/lein
