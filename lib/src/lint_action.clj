@@ -15,7 +15,9 @@
                        :wrong-pre-post :wrong-tag])
 
 (defn- get-files [dir]
-  (let [files (sh "find" dir "-name" "*.clj" "-printf" "%P\n")]
+  (let [files (sh "find" dir
+                  "-name" "*.clj" "-printf" "%P\n"
+                  "-or" "-name" "*.clj?" "-printf" "%P\n")]
     (when (zero? (:exit files))
       (cstr/split-lines (:out files)))))
 
