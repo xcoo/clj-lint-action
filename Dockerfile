@@ -1,11 +1,12 @@
 FROM ghcr.io/graalvm/native-image:22.2.0 AS build-clj-kondo
 
+ARG CLJ_KONDO_VERSION=2023.05.26
 RUN microdnf install -y gzip tar && \
-    curl -LO  https://github.com/clj-kondo/clj-kondo/archive/refs/tags/v2023.04.14.tar.gz && \
-    gunzip v2023.04.14.tar.gz && \
-    tar -xvf v2023.04.14.tar
+    curl -LO  https://github.com/clj-kondo/clj-kondo/archive/refs/tags/v${CLJ_KONDO_VERSION}.tar.gz && \
+    gunzip v${CLJ_KONDO_VERSION}.tar.gz && \
+    tar -xvf v${CLJ_KONDO_VERSION}.tar
 
-WORKDIR /app/clj-kondo-2023.04.14/
+WORKDIR /app/clj-kondo-${CLJ_KONDO_VERSION}/
 ENV GRAALVM_HOME /usr
 
 RUN curl -o /usr/local/bin/lein https://raw.githubusercontent.com/technomancy/leiningen/stable/bin/lein && \
@@ -16,7 +17,7 @@ ENV PATH /usr/bin:$PATH
 RUN script/compile && \
     mv ./clj-kondo /
 
-FROM clojure:tools-deps-jammy
+FROM clojure:temurin-20-tools-deps-jammy
 COPY --from=build-clj-kondo /clj-kondo /usr/local/bin/clj-kondo
 COPY --from=build-clj-kondo /usr/local/bin/lein /usr/local/bin/lein
 RUN chmod +x /usr/local/bin/lein
