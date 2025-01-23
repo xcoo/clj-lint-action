@@ -1,6 +1,6 @@
 FROM ghcr.io/graalvm/native-image:22.2.0 AS build-clj-kondo
 
-ARG CLJ_KONDO_VERSION=2023.05.26
+ARG CLJ_KONDO_VERSION=2025.02.20
 RUN microdnf install -y gzip tar && \
     curl -LO  https://github.com/clj-kondo/clj-kondo/archive/refs/tags/v${CLJ_KONDO_VERSION}.tar.gz && \
     gunzip v${CLJ_KONDO_VERSION}.tar.gz && \
