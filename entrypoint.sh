@@ -1,5 +1,6 @@
 #!/bin/sh -l
 
+echo "BOOT LINT ACTION"
 BRANCH_NAME=${GITHUB_REF#refs/heads/}
 git config --global --add safe.directory /github/workspace
 
@@ -8,8 +9,13 @@ then
     git fetch --depth 1  origin $4
     FILES=`git diff FETCH_HEAD HEAD --diff-filter=AM --name-only|grep '\.clj$'|sed 's/^.*$/"&"/g'|tr "\n" " "`
 else
+    echo "NOT INITIAL COMMIT"
     git fetch --unshallow
     BASE_NEXT_HASH=$(git log $BRANCH_NAME  --not `git for-each-ref --format='%(refname)' refs |grep -v /$BRANCH_NAME$ ` --pretty=format:"%H"|tail -n 1)
+
+
+    echo $BASE_NEXT_HASH
+
     if [ -z "$BASE_NEXT_HASH" ]; then
         git fetch --depth 1  origin $4
         FILES=`git diff FETCH_HEAD HEAD --diff-filter=AM --name-only|grep '\.clj$'|sed 's/^.*$/"&"/g'|tr "\n" " "`
