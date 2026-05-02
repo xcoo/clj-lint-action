@@ -4,7 +4,7 @@
         clj-time {:mvn/version "0.15.2"}
         org.clojure/clojure {:mvn/version "1.10.3"}
         ;; linters
-        cljfmt {:mvn/version "RELEASE"}
+        dev.weavejester/cljfmt {:mvn/version "RELEASE"}
         clj-kondo/clj-kondo {:mvn/version "RELEASE"}
         jonase/eastwood {:mvn/version "RELEASE"}
         tvaughan/kibit-runner {:mvn/version "RELEASE"}}}
