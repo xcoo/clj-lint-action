@@ -1,7 +1,7 @@
-{:deps {cheshire {:mvn/version "5.10.1"}
-        clj-http {:mvn/version "3.12.3"}
-        environ {:mvn/version "1.2.0"}
-        clj-time {:mvn/version "0.15.2"}
+{:deps {cheshire/cheshire {:mvn/version "5.10.1"}
+        clj-http/clj-http {:mvn/version "3.12.3"}
+        environ/environ {:mvn/version "1.2.0"}
+        clj-time/clj-time {:mvn/version "0.15.2"}
         org.clojure/clojure {:mvn/version "1.10.3"}
         ;; linters
         dev.weavejester/cljfmt {:mvn/version "RELEASE"}
