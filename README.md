@@ -6,7 +6,7 @@ Run some linters such as clj-kondo , kibit , eastwood and show results as warnin
 
 ```yaml
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v6
     - uses: xcoo/clj-lint-action@v1.1.11
       with:
         linters: "\"all\""
