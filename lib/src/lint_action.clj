@@ -81,10 +81,7 @@
                     (str "[clj-kondo]" (nth matches 5))}))))))
 
 (defn- run-cljfmt [files cwd relative-dir]
-  (let [cljfmt-result (sh "clojure"
-                          "-Sdeps" (str {:deps {'cljfmt {:mvn/version "RELEASE"}}})
-                          "-m"
-                          "cljfmt.main" "check"
+  (let [cljfmt-result (sh "clojure" "-M" "-m" "cljfmt.main" "check"
                           (cstr/join " " files))]
     (when-not (zero? (:exit cljfmt-result))
       (->> (:err cljfmt-result)
@@ -100,11 +97,7 @@
                      :message (str "[cljfmt] cljfmt fail." file)})))))))
 
 (defn- run-eastwood-clj [dir namespaces linters options]
-  (sh "clojure"
-      "-Sdeps"
-      (pr-str {:deps {'jonase/eastwood {:mvn/version "RELEASE"}}})
-      "-m"
-      "eastwood.lint"
+  (sh "clojure" "-M" "-m" "eastwood.lint"
       (pr-str (merge {:source-paths ["src"]
                       :linters linters
                       :namespaces namespaces}
@@ -138,11 +131,7 @@
 
 (defn- run-kibit [dir files relative-dir]
   (let [kibit-result
-        (sh "clojure"
-            "-Sdeps"
-            (pr-str {:deps {'tvaughan/kibit-runner
-                            {:mvn/version "RELEASE"}}})
-            "-m" "kibit-runner.cmdline" (cstr/join " " files)
+        (sh "clojure" "-M" "-m" "kibit-runner.cmdline" (cstr/join " " files)
             :dir dir)]
     (->> (cstr/split (:out kibit-result) #"\n\n")
          (map (fn [line]
